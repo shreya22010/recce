@@ -25,11 +25,11 @@ ROOT = HERE
 JOBS_DB = os.environ.get("JOBS_DB", os.path.join(ROOT, "jobs.db"))
 TAXONOMY = os.path.join(ROOT, "taxonomy.json")
 sys.path.insert(0, os.path.join(HERE, "core"))
+import env
+env.load()                     # before anything reads DATABASE_URL or the key
 import db as _db
 sys.path.insert(0, os.path.join(ROOT, "vendor"))
 
-import env
-env.load()                     # picks up .env before anything reads the key
 
 from topics import topics_of
 

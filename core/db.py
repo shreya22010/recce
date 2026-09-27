@@ -16,8 +16,38 @@ import os
 import re
 import sqlite3
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
-IS_PG = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+def _url():
+    """Read the environment when asked, not when imported.
+
+    Read at import time this silently chose SQLite whenever the module happened
+    to be imported before the .env file was loaded — which is exactly what
+    happened, so a run that looked like it was exercising Postgres was writing
+    to the local file and reporting success.
+    """
+    return os.environ.get("DATABASE_URL", "").strip()
+
+
+def is_pg():
+    return _url().startswith(("postgres://", "postgresql://"))
+
+
+class _Lazy:
+    """So `db.DATABASE_URL` and `db.IS_PG` keep working as attributes."""
+
+    def __getattr__(self, name):
+        if name == "DATABASE_URL":
+            return _url()
+        if name == "IS_PG":
+            return is_pg()
+        raise AttributeError(name)
+
+
+def __getattr__(name):
+    if name == "DATABASE_URL":
+        return _url()
+    if name == "IS_PG":
+        return is_pg()
+    raise AttributeError(name)
 
 # ---------------------------------------------------------------- SQL ----
 
@@ -162,8 +192,8 @@ def pg_ddl(stmt):
 
 def connect(sqlite_path):
     """A connection to whichever database is configured."""
-    if IS_PG:
-        return PgConnection(DATABASE_URL)
+    if is_pg():
+        return PgConnection(_url())
     db = sqlite3.connect(sqlite_path)
     db.execute("pragma foreign_keys = on")
     return db
@@ -171,7 +201,7 @@ def connect(sqlite_path):
 
 def init(sqlite_path, schema_sql):
     db = connect(sqlite_path)
-    if IS_PG:
+    if is_pg():
         db.executescript(schema_sql)
     else:
         db.executescript(schema_sql)
