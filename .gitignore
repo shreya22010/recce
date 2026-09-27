@@ -1,0 +1,14 @@
+# The Groq key lives here. Never commit it.
+.env
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local database. Production uses Postgres via DATABASE_URL; committing this
+# would ship test submissions and a stale package cache to every deploy.
+recce.db
+
+# Scratch output from the ranking experiments
+ranked_*.json
+pool.json

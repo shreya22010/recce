@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recce — scout the drive before you sit it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+/* Dark ground with vivid blocks and geometric shapes, the way the references
+   work: colour does the structuring, so nothing floats in an empty grey field.
+   Each section owns a colour, which is also how you find your place again. */
+:root{
+  --bg:#101319; --surface:#171B24; --surface2:#1E232F; --line:#272D3B; --line2:#1F2431;
+  --ink:#F4F6FA; --soft:#A2AAB9; --faint:#6C7488;
+  --orange:#E8734A; --yellow:#D9A93E; --green:#4BA87A; --blue:#5B84D6;
+  --purple:#8F7FD1; --pink:#C97BA3; --teal:#4FA8A0;
+  --orange-d:#33211A; --yellow-d:#2E2715; --green-d:#16281F; --blue-d:#1A2033;
+  --purple-d:#231F33; --teal-d:#152524;
+  --ok:#3DD68C; --warn:#FFC42E; --bad:#FF6B6B;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);display:flex;min-height:100vh;
+  font:14.5px/1.55 Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  letter-spacing:-.005em}
+button,input,select,textarea{font:inherit;letter-spacing:inherit;color:inherit}
+h1,h2,h3,.dsp{font-family:"Space Grotesk",Inter,sans-serif;letter-spacing:-.025em}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--blue)}
+
+/* rail */
+.rail{width:214px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);
+  padding:20px 0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;z-index:5}
+.brand{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk";font-weight:700;
+  font-size:17px;padding:0 18px 20px;color:var(--ink)}
+.brand i{width:18px;height:18px;border-radius:6px;
+  background:linear-gradient(135deg,var(--orange),var(--yellow));flex-shrink:0}
+.nav{display:flex;flex-direction:column;gap:3px;padding:0 10px}
+.nav button{display:flex;align-items:center;gap:11px;background:none;border:0;text-align:left;
+  padding:10px 12px;border-radius:10px;color:var(--soft);font-size:14px;cursor:pointer;
+  width:100%;transition:.15s}
+.nav button:hover{background:var(--surface2);color:var(--ink)}
+.nav button.on{background:var(--surface2);color:var(--ink);font-weight:600}
+.nav .sq{width:9px;height:9px;border-radius:3px;background:var(--faint);flex-shrink:0;transition:.15s}
+.nav button:nth-child(1).on .sq{background:var(--orange)}
+.nav button:nth-child(2).on .sq{background:var(--blue)}
+.nav button:nth-child(3).on .sq{background:var(--green)}
+.nav button:nth-child(4).on .sq{background:var(--purple)}
+.nav button:nth-child(5).on .sq{background:var(--yellow)}
+.railfoot{margin-top:auto;padding:14px 18px 0;color:var(--faint);font-size:11.5px;
+  border-top:1px solid var(--line);line-height:1.5}
+
+main{flex:1;min-width:0;padding:0 0 80px;max-width:1240px;margin:0 auto;width:100%}
+.pad{padding:0 36px}
+.view{display:none}.view.on{display:block}
+
+/* hero with shapes */
+.hero{position:relative;padding:46px 36px 40px;overflow:hidden}
+.hero h1{font-size:44px;font-weight:700;line-height:1.06;margin-bottom:14px;max-width:16ch}
+.hero p{color:var(--soft);font-size:15.5px;max-width:52ch;line-height:1.6}
+.shapes{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.55}
+.sh{position:absolute;border-radius:8px}
+.sh.c{border-radius:50%}
+.sh.p{border-radius:999px}
+
+/* colour blocks */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.tile{border-radius:var(--r);padding:20px;position:relative;overflow:hidden;color:var(--ink);
+  cursor:pointer;transition:.16s;text-align:left;display:flex;flex-direction:column;gap:6px;
+  border:1px solid transparent}
+.tile:hover{transform:translateY(-3px)}
+.tile b{font-family:"Space Grotesk";font-size:18px;font-weight:700}
+.tile span{font-size:13px;opacity:.78;line-height:1.5}
+.tile .blob{position:absolute;right:-26px;bottom:-26px;width:96px;height:96px;
+  border-radius:50%;background:rgba(255,255,255,.05)}
+.t-o{background:var(--orange-d);border-color:var(--orange)}
+.t-y{background:var(--yellow-d);border-color:var(--yellow)}
+.t-g{background:var(--green-d);border-color:var(--green)}
+.t-b{background:var(--blue-d);border-color:var(--blue)}
+.t-p{background:var(--purple-d);border-color:var(--purple)}
+.t-t{background:var(--teal-d);border-color:var(--teal)}
+.t-o b{color:var(--orange)}.t-y b{color:var(--yellow)}.t-g b{color:var(--green)}
+.t-b b{color:var(--blue)}.t-p b{color:var(--purple)}.t-t b{color:var(--teal)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  margin-bottom:16px;overflow:hidden}
+.ch{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line2)}
+.ch h3{font-size:15px;font-weight:600}
+.ch .hint{margin-left:auto;color:var(--faint);font-size:12px}
+.cb{padding:18px}
+.sect-h{font-family:"Space Grotesk";font-size:12px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--faint);margin:30px 0 13px;display:flex;align-items:center;gap:10px}
+.sect-h:after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* controls */
+.searchbar{display:flex;gap:10px;align-items:center;background:var(--surface);
+  border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 22px;max-width:700px}
+.searchbar:focus-within{border-color:var(--orange)}
+.sb-in{flex:1;border:0;background:none;outline:0;font-size:15px;min-width:0}
+.sb-in::placeholder{color:var(--faint)}
+.sb-sel{border:0;background:none;outline:0;font-size:13.5px;color:var(--soft);
+  border-left:1px solid var(--line);padding-left:14px;cursor:pointer}
+.btn{border:0;border-radius:999px;padding:12px 24px;font-size:14px;font-weight:600;
+  cursor:pointer;background:var(--orange);color:#fff;transition:.15s;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.b{background:var(--blue)}.btn.g{background:var(--green)}.btn.y{background:var(--yellow)}
+.btn.sm{padding:8px 16px;font-size:13px}
+.ghost{background:none;border:1px solid var(--line);color:var(--soft);border-radius:999px;
+  padding:8px 16px;font-size:13px;cursor:pointer;transition:.15s;text-decoration:none;
+  display:inline-block}
+.ghost:hover{border-color:var(--soft);color:var(--ink)}
+.inp,textarea.inp,select.inp{width:100%;border:1px solid var(--line);background:var(--surface2);
+  border-radius:12px;padding:11px 15px;font-size:14px;outline:0}
+.inp:focus{border-color:var(--blue)}
+.inp::placeholder{color:var(--faint)}
+textarea.inp{resize:vertical;line-height:1.6;font-family:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;
+  padding:6px 14px;font-size:12.5px;cursor:pointer;color:var(--soft);transition:.15s}
+.chip:hover{border-color:var(--soft);color:var(--ink)}
+.chip.on{background:var(--yellow-d);border-color:var(--yellow);color:var(--yellow);font-weight:600}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label.f{display:block;font-size:12.5px;color:var(--soft);margin-bottom:6px}
+
+/* the ring */
+.ring{--p:0;width:118px;height:118px;border-radius:50%;flex-shrink:0;display:grid;
+  place-items:center;background:conic-gradient(var(--rc) calc(var(--p)*1%),var(--line2) 0)}
+.ring i{width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;
+  place-items:center;font-family:"Space Grotesk";font-size:27px;font-weight:700;font-style:normal}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:500;color:var(--faint);font-size:11px;text-transform:uppercase;
+  letter-spacing:.08em;padding:10px 18px;border-bottom:1px solid var(--line2)}
+td{padding:12px 18px;border-bottom:1px solid var(--line2);vertical-align:top}
+tr:last-child td{border:0}
+tbody tr:hover{background:var(--surface2)}
+td.r,th.r{text-align:right}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;
+  text-transform:uppercase;letter-spacing:.05em}
+.tag.rep{background:rgba(61,214,140,.16);color:var(--green)}
+.tag.pre{background:var(--surface2);color:var(--faint);border:1px solid var(--line)}
+.tag.sk{background:rgba(77,141,246,.15);color:var(--blue);text-transform:none;letter-spacing:0;
+  font-weight:500;font-size:12px}
+.tag.miss{background:rgba(255,107,53,.14);color:var(--orange);text-transform:none;
+  letter-spacing:0;font-weight:500;font-size:12px}
+
+/* sections */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;border-left:4px solid var(--sc,var(--line))}
+.sec>summary{padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:11px;
+  font-family:"Space Grotesk";font-weight:600;font-size:15px;list-style:none}
+.sec>summary::-webkit-details-marker{display:none}
+.sec>summary:hover{background:var(--surface2)}
+.sec>summary .n{margin-left:auto;font-family:Inter;font-weight:400;font-size:12px;color:var(--faint)}
+.sec .inner{padding:6px 18px 20px;border-top:1px solid var(--line2)}
+.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.secs .sec[open]{grid-column:1/-1}
+.tp{font-family:"Space Grotesk";font-size:14px;font-weight:600;margin:20px 0 10px;
+  color:var(--yellow)}
+.fbox{background:rgba(255,196,46,.09);border:1px solid rgba(255,196,46,.28);border-radius:10px;
+  padding:13px 16px;margin-bottom:12px}
+.fbox b{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--yellow)}
+.fbox ul{margin:7px 0 0;padding-left:18px}
+.fbox li{font-size:13px;line-height:1.65}
+.qa{background:var(--surface2);border-radius:11px;padding:14px 16px;margin-bottom:10px}
+.qa .qt{font-weight:500;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.qa .qt span:first-child{flex:1}
+.qa ol{margin:0 0 9px;padding-left:20px}
+.qa li{font-size:13px;line-height:1.7;color:var(--soft)}
+.qa .ansbox{background:rgba(61,214,140,.12);border-radius:8px;padding:9px 13px;font-size:13px}
+.qa .ansbox b{color:var(--green)}
+.qa pre{background:#0C0F14;border:1px solid var(--line);border-radius:9px;padding:13px 15px;
+  overflow-x:auto;margin:10px 0}
+.qa pre code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6}
+.src{font-size:12px;color:var(--faint);margin-top:9px;padding-top:9px;
+  border-top:1px dashed var(--line);line-height:1.7}
+.src a{color:var(--blue)}
+.src.rep{color:var(--green)}.src.rep b{color:var(--green)}
+.vids{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.srcbox{margin-top:16px;border:1px solid var(--line);border-radius:11px;padding:14px 16px;
+  background:var(--surface2)}
+.srcbox-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
+  margin-bottom:7px;font-weight:600}
+.srcbox-t{font-size:13px;color:var(--soft);line-height:1.65}
+.srcbox-t b{color:var(--ink)}
+
+/* chat */
+.chat{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:430px}
+.msgs{flex:1;overflow-y:auto;padding:4px 2px 16px;display:flex;flex-direction:column;gap:14px}
+.mlang{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);
+  margin-bottom:9px}
+.msg{max-width:84%;padding:15px 19px;border-radius:16px;font-size:14px;line-height:1.7}
+.msg .mh{font-family:"Space Grotesk";font-weight:600;font-size:14.5px;margin:14px 0 7px}
+.msg .mh:first-child{margin-top:0}
+.msg .mli{padding-left:17px;position:relative;margin-bottom:5px}
+.msg .mli:before{content:"";position:absolute;left:4px;top:9px;width:4px;height:4px;
+  border-radius:50%;background:var(--faint)}
+.tw{overflow-x:auto;margin:11px 0}
+table.mt{border-collapse:collapse;font-size:13px;width:100%}
+table.mt th{background:var(--surface2);padding:8px 12px;border:1px solid var(--line);
+  text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink);font-weight:600}
+table.mt td{padding:8px 12px;border:1px solid var(--line);vertical-align:top}
+.msg.me{align-self:flex-end;background:var(--blue-d);border:1px solid var(--blue);
+  color:var(--ink);border-bottom-right-radius:5px}
+.msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--line);
+  border-bottom-left-radius:5px}
+.msg pre{background:#0C0F14;border:1px solid var(--line);border-radius:9px;padding:12px 14px;
+  overflow-x:auto;margin:9px 0}
+.msg pre code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.6}
+.msg code.inline{background:var(--surface2);padding:1px 6px;border-radius:5px;font-size:12.5px}
+.msg p{margin:0 0 9px}.msg p:last-child{margin:0}
+.composer{display:flex;gap:10px;align-items:flex-end;border-top:1px solid var(--line);
+  padding-top:14px}
+.composer textarea{flex:1;min-height:46px;max-height:150px}
+
+.note{border-radius:12px;padding:14px 17px;font-size:13.5px;line-height:1.6;margin-bottom:16px}
+.note.warn{background:rgba(255,196,46,.1);border:1px solid rgba(255,196,46,.3);color:var(--yellow)}
+.note.bad{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);color:var(--bad)}
+.note.ok{background:rgba(61,214,140,.1);border:1px solid rgba(61,214,140,.3);color:var(--green)}
+.note b{font-weight:700}
+.load{display:flex;align-items:center;gap:11px;color:var(--soft);font-size:14px;padding:18px 0}
+.sp{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--orange);
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{padding:40px 20px;text-align:center;color:var(--faint);font-size:14px}
+.prog{height:5px;background:var(--line2);border-radius:3px;overflow:hidden;flex:1;min-width:140px}
+.prog i{display:block;height:100%;background:var(--orange);transition:width .3s}
+@media(max-width:900px){
+  body{flex-direction:column}
+  .rail{width:100%;height:auto;position:static;flex-direction:row;align-items:center;
+    padding:12px 16px;overflow-x:auto}
+  .brand{padding:0 16px 0 0}.nav{flex-direction:row;padding:0}.railfoot{display:none}
+  .hero{padding:30px 18px}.hero h1{font-size:31px}.pad{padding:0 18px}
+  .grid2{grid-template-columns:1fr}}
+</style></head><body>
+<div class="rail">
+  <div class="brand"><i></i>recce</div>
+  <div class="nav">
+    <button class="on" data-v="resume" onclick="go('resume')"><span class="sq"></span>Resume &amp; jobs</button>
+    <button data-v="jd" onclick="go('jd')"><span class="sq"></span>Match a JD</button>
+    <button data-v="prep" onclick="go('prep')"><span class="sq"></span>Prep set</button>
+    <button data-v="ask" onclick="go('ask')"><span class="sq"></span>Ask anything</button>
+    <button data-v="report" onclick="go('report')"><span class="sq"></span>Report a drive</button>
+  </div>
+  <div class="railfoot" id="railfoot"></div>
+</div>
+
+<main>
+<!-- 1 ── RESUME & JOBS ──────────────────────────────────────────────── -->
+<section class="view on" id="v-resume">
+  <div class="hero">
+    <div class="shapes">
+      <span class="sh" style="width:104px;height:104px;background:var(--orange);opacity:.14;right:6%;top:14%"></span>
+      <span class="sh c" style="width:66px;height:66px;background:var(--yellow);opacity:.15;right:22%;top:56%"></span>
+      <span class="sh p" style="width:150px;height:46px;background:var(--blue);opacity:.12;right:13%;top:-6%"></span>
+      <span class="sh" style="width:38px;height:38px;background:var(--green);opacity:.2;right:31%;top:26%"></span>
+    </div>
+    <h1>Start with your resume.</h1>
+    <p>It gets read in memory to pull out your skills, then discarded. You get the openings you
+       match, how well you match each one, and exactly what to add so more of them fit.</p>
+    <div class="row">
+      <input type="file" id="file" accept=".pdf" hidden>
+      <button class="btn" onclick="document.getElementById('file').click()">Upload your resume</button>
+      <span id="fname" style="color:var(--faint);font-size:13px">PDF, up to 5 MB</span>
+    </div>
+  </div>
+  <div class="pad"><div id="profile"></div><div id="jobsout"></div></div>
+</section>
+
+<!-- 2 ── JD MATCH ──────────────────────────────────────────────────── -->
+<section class="view" id="v-jd">
+  <div class="hero">
+    <div class="shapes">
+      <span class="sh p" style="width:140px;height:44px;background:var(--blue);opacity:.14;right:9%;top:18%"></span>
+      <span class="sh c" style="width:84px;height:84px;background:var(--purple);opacity:.15;right:25%;top:46%"></span>
+      <span class="sh" style="width:52px;height:52px;background:var(--teal);opacity:.17;right:6%;top:62%"></span>
+    </div>
+    <h1>Paste a job description.</h1>
+    <p>See the percentage of what they ask for that your resume actually evidences, which skills
+       are missing, and what to change. Then build the prep set for that company.</p>
+  </div>
+  <div class="pad">
+    <div class="card"><div class="cb">
+      <div class="grid2">
+        <div><label class="f">Company</label>
+          <input class="inp" id="jd-co" placeholder="Infosys"></div>
+        <div><label class="f">Role (optional)</label>
+          <input class="inp" id="jd-role" placeholder="Systems Engineer"></div>
+      </div>
+      <div style="margin-top:14px"><label class="f">Job description — paste the requirements</label>
+        <textarea class="inp" id="jd-text" rows="8"
+          placeholder="Paste the full JD here. The requirements section matters most."></textarea></div>
+      <div class="row"><button class="btn b" onclick="matchJD()">Match against my resume</button>
+        <span id="jd-warn" style="font-size:13px;color:var(--faint)"></span></div>
+    </div></div>
+    <div id="jdout"></div>
+  </div>
+</section>
+
+<!-- 3 ── PREP SET ──────────────────────────────────────────────────── -->
+<section class="view" id="v-prep">
+  <div class="hero">
+    <div class="shapes">
+      <span class="sh" style="width:96px;height:96px;background:var(--green);opacity:.14;right:8%;top:20%"></span>
+      <span class="sh c" style="width:58px;height:58px;background:var(--orange);opacity:.18;right:24%;top:12%"></span>
+      <span class="sh p" style="width:132px;height:42px;background:var(--yellow);opacity:.13;right:14%;top:64%"></span>
+    </div>
+    <h1>Prep for one company.</h1>
+    <p>Checked against the open web so you know it is real. Only the rounds they actually run,
+       with the questions, worked solutions, videos, and the source for every claim.</p>
+    <div class="searchbar" style="margin-top:22px">
+      <input class="sb-in" id="co" placeholder="Which company is visiting?"
+             onkeydown="if(event.key==='Enter')loadPkg()">
+      <select class="sb-sel" id="lang">
+        <option>Python</option><option>Java</option><option>C++</option>
+        <option>C</option><option>JavaScript</option></select>
+      <button class="btn g" onclick="loadPkg()">Open prep set</button>
+    </div>
+    <div class="chips" id="cosuggest" style="margin-top:16px"></div>
+  </div>
+  <div class="pad"><div id="ready"></div><div id="pkgout"></div></div>
+</section>
+
+<!-- 4 ── ASK ───────────────────────────────────────────────────────── -->
+<section class="view" id="v-ask">
+  <div class="pad" style="padding-top:34px">
+    <h1 style="font-size:30px;margin-bottom:8px">Ask anything about placements</h1>
+    <p style="color:var(--soft);max-width:60ch;margin-bottom:8px">Coding in any language,
+       aptitude, HR answers, resumes, offers. Placement and job questions only &mdash; it will
+       turn down anything else.</p>
+    <div class="chat">
+      <div class="msgs" id="msgs"></div>
+      <div class="composer">
+        <textarea class="inp" id="chatin" rows="1" placeholder="Ask a question…"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+        <select class="inp" id="asklang" style="width:124px" onchange="langChanged()">
+          <option>Python</option><option>Java</option><option>C++</option>
+          <option>C</option><option>JavaScript</option></select>
+        <button class="btn" id="sendbtn" onclick="send()">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 ── REPORT ────────────────────────────────────────────────────── -->
+<section class="view" id="v-report">
+  <div class="pad" style="padding-top:34px">
+    <h1 style="font-size:30px;margin-bottom:8px">Report a drive</h1>
+    <p style="color:var(--soft);max-width:62ch;margin-bottom:20px">Any college, any email.
+       One submission per person per drive, enforced in the database &mdash; that constraint is
+       the only reason the counts here mean anything. What you report turns
+       <span class="tag pre">predicted</span> items into <span class="tag rep">reported</span>
+       with the date attached.</p>
+    <div class="card"><div class="cb">
+      <div class="grid2">
+        <div><label class="f">Your email</label>
+          <input class="inp" id="s-email" placeholder="college or personal address">
+          <span style="font-size:12px;color:var(--faint)" id="s-emailkind">A college address is marked verified. A personal one still counts.</span></div>
+        <div><label class="f">Graduating year</label><input class="inp num" id="s-batch" value="2027"></div>
+        <div><label class="f">Company</label><input class="inp" id="s-company" placeholder="Infosys"></div>
+        <div><label class="f">Role offered</label><input class="inp" id="s-role" placeholder="Systems Engineer"></div>
+        <div><label class="f">Drive date</label><input class="inp" id="s-date" type="date"></div>
+        <div><label class="f">College</label><input class="inp" id="s-campus" placeholder="your college"></div>
+      </div>
+      <div style="margin-top:16px"><label class="f">Rounds held, in order</label>
+        <span class="chips" id="s-rounds"></span></div>
+      <div class="row">
+        <span><label class="f">Furthest round reached</label>
+          <input class="inp num" id="s-reached" value="1" style="width:78px"></span>
+        <span><label class="f">Got an offer?</label>
+          <span class="chips"><button class="chip" id="s-sel" onclick="this.classList.toggle('on')">Yes</button></span></span>
+      </div>
+      <div style="margin-top:16px"><label class="f">Questions you were asked</label>
+        <div id="qrows"></div>
+        <button class="ghost" onclick="addQ()">+ another question</button></div>
+      <div class="row"><button class="btn g" onclick="submitDrive()">Submit</button>
+        <span id="subout" style="font-size:13px"></span></div>
+    </div></div>
+  </div>
+</section>
+</main>
+<script>
+const API=location.origin, $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let PROFILE=null, PKG=null, CHAT=[];
+
+function go(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
+  $('v-'+v).classList.add('on');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  scrollTo({top:0,behavior:'smooth'});
+  if(v==='prep') boot();
+}
+
+/* markdown-ish rendering, fenced code kept verbatim so a stray asterisk inside
+   a snippet never becomes markup */
+function md(t){
+  return String(t).split(/```/).map((chunk,i)=>{
+    if(i%2) return `<pre><code>${esc(chunk.replace(/^[a-zA-Z+#]*\n/,'').trim())}</code></pre>`;
+    return block(chunk);
+  }).join('');
+}
+
+/* Pipe tables were coming through as raw pipes, which is most of why the
+   answers looked like a mess: a shortcut table is exactly what you want before
+   an aptitude round, and it was the least readable thing on screen. */
+function block(text){
+  const lines=String(text).split('\n');
+  let out='', buf=[];
+  const flushTable=()=>{
+    if(buf.length<2){ out+=buf.map(l=>para(l)).join(''); buf=[]; return }
+    /* Split on unescaped pipes only. A formula cell like "Relative Speed =
+       Speed1 | Speed2" otherwise splits into extra columns, and the row's last
+       cell gets pushed into a phantom column that no header covers. */
+    const cells=l=>l.replace(/^\s*\|/,'').replace(/\|\s*$/,'')
+      .split(/(?<!\\)\|/).map(c=>c.replace(/\\\|/g,'|').trim());
+    const rows=buf.filter(l=>!/^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(l)).map(cells);
+    if(!rows.length){ buf=[]; return }
+
+    /* Then make every row the width of the header: extra cells are joined back
+       into the last real column rather than inventing one. */
+    const width=rows[0].length;
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      if(r.length>width) rows[i]=r.slice(0,width-1).concat(r.slice(width-1).join(' '));
+      else while(rows[i].length<width) rows[i].push('');
+    }
+    out+=`<div class="tw"><table class="mt"><thead><tr>${
+      rows[0].map(c=>`<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${
+      rows.slice(1).map(r=>`<tr>${r.map(c=>`<td>${inline(c)}</td>`).join('')}</tr>`).join('')
+    }</tbody></table></div>`;
+    buf=[];
+  };
+  for(const line of lines){
+    if(/^\s*\|.*\|\s*$/.test(line)){ buf.push(line); continue }
+    if(buf.length) flushTable();
+    out+=para(line);
+  }
+  if(buf.length) flushTable();
+  return out;
+}
+function inline(t){
+  return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+               .replace(/`([^`]+)`/g,'<code class="inline">$1</code>');
+}
+function para(line){
+  if(!line.trim()) return '';
+  const h=line.match(/^(#{1,4})\s+(.*)$/);
+  if(h) return `<div class="mh">${inline(h[2])}</div>`;
+  const li=line.match(/^\s*[-*]\s+(.*)$/);
+  if(li) return `<div class="mli">${inline(li[1])}</div>`;
+  const ol=line.match(/^\s*(\d+)\.\s+(.*)$/);
+  if(ol) return `<div class="mli"><b>${ol[1]}.</b> ${inline(ol[2])}</div>`;
+  return `<p>${inline(line)}</p>`;
+}
+
+async function boot(){
+  try{
+    const s=await (await fetch(API+'/api/stats')).json();
+    $('railfoot').innerHTML=`${s.reports} report${s.reports===1?'':'s'} from ${s.students}
+      student${s.students===1?'':'s'} &middot; ${(s.openings||0).toLocaleString()} live openings`;
+  }catch(e){}
+  try{
+    const built=await (await fetch(API+'/api/built')).json();
+    const COLORS=['t-o','t-y','t-g','t-b','t-p','t-t'];
+    $('ready').innerHTML = built.companies.length ? `
+      <div class="sect-h">Ready to open now</div>
+      <div class="tiles">${built.companies.map((c,i)=>`
+        <button class="tile ${COLORS[i%COLORS.length]}"
+                onclick="$('co').value='${esc(c.company)}';loadPkg()">
+          <span class="blob"></span>
+          <b>${esc(c.company)}</b>
+          <span>${c.questions?`${c.sections} sections &middot; ${c.questions} questions`
+            :`${c.sections} section${c.sections===1?'':'s'} &middot; essentials only`}${
+            c.reported?` &middot; ${c.reported} confirmed`:''}</span>
+        </button>`).join('')}</div>` : '';
+
+    const POPULAR=['Infosys','TCS','Wipro','Accenture','Cognizant','Capgemini','IBM',
+                   'LTIMindtree','Zoho','Deloitte','Amazon','Juspay'];
+    const have=new Set(built.companies.map(c=>c.company.toLowerCase()));
+    $('cosuggest').innerHTML=POPULAR.filter(p=>!have.has(p.toLowerCase())).map(p=>
+      `<button class="chip" onclick="$('co').value='${esc(p)}';loadPkg()">${esc(p)}</button>`).join('');
+  }catch(e){}
+}
+
+/* 1 ── resume -------------------------------------------------------- */
+$('file').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  $('fname').textContent=f.name;
+  $('profile').innerHTML='<div class="load"><span class="sp"></span>Reading your resume</div>';
+  const body=new FormData(); body.append('file',f);
+  try{
+    const r=await fetch(API+'/api/resume',{method:'POST',body});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||'Could not read that PDF.');
+    PROFILE=d; paintProfile(); findJobs();
+  }catch(err){
+    PROFILE=null; $('fname').textContent='PDF, up to 5 MB'; $('file').value='';
+    $('jobsout').innerHTML='';
+    $('profile').innerHTML=`<div class="note bad" style="margin-top:20px">
+      <b>That is not a resume.</b> ${esc(err.message)}</div>`;
+  }
+});
+
+function paintProfile(){
+  const d=PROFILE;
+  $('profile').innerHTML=`
+    <div class="sect-h">What I read</div>
+    <div class="card"><div class="cb">
+      <div class="grid2">
+        <div><label class="f">Graduating</label><input class="inp num" id="e-year" value="${d.graduating||''}"></div>
+        <div><label class="f">Based in</label><input class="inp" id="e-city" value="${esc(d.city||'')}"></div>
+      </div>
+      <div style="margin-top:14px"><label class="f">Skills found &mdash; click one to remove it</label>
+        <div class="chips" id="skills"></div>
+        <div class="row"><input class="inp" id="addskill" placeholder="add a skill I missed"
+            style="max-width:260px" onkeydown="if(event.key==='Enter')addSkill()">
+          <button class="ghost" onclick="addSkill()">Add</button></div></div>
+      <div class="row" style="gap:24px">
+        <span><label class="f">Looking for</label><span class="chips" id="want">
+          ${['internship','full-time','either'].map((w,i)=>
+            `<button class="chip${i===2?' on':''}" data-v="${w}" onclick="pick(this)">${w}</button>`).join('')}
+        </span></span>
+        <span><label class="f">Where</label><span class="chips" id="where">
+          ${['my city','anywhere in India'].map((w,i)=>
+            `<button class="chip${i===1?' on':''}" data-v="${w}" onclick="pick(this)">${w}</button>`).join('')}
+        </span></span>
+      </div>
+      <div class="row"><input class="inp" id="othercity" placeholder="or a specific city"
+          style="max-width:220px">
+        <button class="btn" onclick="findJobs()">Find matching openings</button></div>
+    </div></div>`;
+  paintSkills();
+}
+function paintSkills(){
+  $('skills').innerHTML=PROFILE.skills.map(s=>
+    `<button class="chip on" onclick="dropSkill('${esc(s)}')">${esc(s)} &times;</button>`).join('');
+}
+function dropSkill(s){ PROFILE.skills=PROFILE.skills.filter(x=>x!==s); paintSkills() }
+function addSkill(){
+  const v=$('addskill').value.trim().toLowerCase();
+  if(v&&!PROFILE.skills.includes(v)){ PROFILE.skills.push(v); PROFILE.skills.sort(); paintSkills() }
+  $('addskill').value='';
+}
+function pick(b){ b.parentElement.querySelectorAll('.chip').forEach(o=>o.classList.remove('on'));
+  b.classList.add('on') }
+const chosen=id=>{ const o=$(id).querySelector('.chip.on'); return o?o.dataset.v:null };
+
+async function findJobs(){
+  if(!PROFILE) return;
+  $('jobsout').innerHTML='<div class="load"><span class="sp"></span>Scoring live openings</div>';
+  const other=($('othercity')||{}).value?.trim()||'';
+  const body={ skills:PROFILE.skills, graduating:+($('e-year')||{}).value||PROFILE.graduating,
+    city:($('e-city')||{}).value||PROFILE.city,
+    want:{'internship':'internship','full-time':'fulltime','either':'either'}[chosen('want')]||'either',
+    where: other?'custom':(chosen('where')==='my city'?'home':'anywhere'),
+    custom_city: other||null, limit:60 };
+  const d=await (await fetch(API+'/api/match',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+
+  /* The API ranks by an internal score that weights rare skills and lifts
+     early-career roles, but the column on screen is coverage, so the list read
+     as unsorted: 44, 25, 25, 62. Sort by the number actually shown. */
+  d.jobs.sort((a,b)=>(b.coverage||0)-(a.coverage||0) || (b.score||0)-(a.score||0));
+
+  /* The same role posted under several requisition ids was filling the list
+     with identical rows. One row, with a note of how many openings. */
+  const byRole=new Map();
+  d.jobs.forEach(j=>{
+    const k=`${j.title}|${j.company}|${j.location||''}`.toLowerCase();
+    const seen=byRole.get(k);
+    if(seen){ seen.openings=(seen.openings||1)+1; return }
+    byRole.set(k,{...j,openings:1});
+  });
+  const rows=[...byRole.values()];
+
+  /* what to add: the skills the near-miss postings keep asking for */
+  const miss={}; d.jobs.forEach(j=>(j.missing||[]).forEach(s=>miss[s]=(miss[s]||0)+1));
+  const top=Object.entries(miss).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const avg=d.jobs.length?Math.round(100*d.jobs.reduce((n,j)=>n+(j.coverage||0),0)/d.jobs.length):0;
+
+  $('jobsout').innerHTML=`
+    <div class="sect-h">How you match</div>
+    <div class="card"><div class="cb" style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+      <div class="ring" style="--p:${avg};--rc:var(--green)"><i>${avg}%</i></div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:'Space Grotesk';font-size:20px;font-weight:600;margin-bottom:6px">
+          ${d.eligible} openings match you</div>
+        <div style="color:var(--soft);font-size:13.5px;line-height:1.65">
+          Out of ${d.total_indexed.toLocaleString()} live postings in India,
+          ${d.gate.toLocaleString()} are open to your graduating year, and ${d.eligible}
+          ask for skills you have. On average you cover ${avg}% of what they want.</div>
+      </div>
+    </div></div>
+    ${top.length?`
+      <div class="sect-h">Add these to your resume</div>
+      <div class="tiles">${top.slice(0,6).map((t,i)=>`
+        <div class="tile ${['t-o','t-y','t-g','t-b','t-p','t-t'][i%6]}" style="cursor:default">
+          <span class="blob"></span><b>${esc(t[0])}</b>
+          <span>asked for by ${t[1]} of your matches</span></div>`).join('')}</div>`:''}
+    <div class="sect-h">Openings</div>
+    <div class="card"><table><thead><tr><th>Role</th><th>Company</th><th>You have</th>
+      <th class="r">Match</th></tr></thead><tbody>
+      ${rows.slice(0,40).map(j=>{
+        const pc=Math.round((j.coverage||0)*100);
+        const col=pc>=60?'var(--green)':pc>=35?'var(--yellow)':'var(--soft)';
+        return `<tr>
+        <td><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a>
+          ${j.openings>1?`<span class="tag pre" style="margin-left:7px">${j.openings} openings</span>`:''}</td>
+        <td style="color:var(--soft)">${esc(j.company)}<div style="font-size:12px;color:var(--faint)">${
+          esc(j.location||'India')}</div></td>
+        <td>${(j.have||[]).slice(0,4).map(s=>`<span class="tag sk">${esc(s)}</span>`).join(' ')}</td>
+        <td class="r num"><b style="color:${col}">${pc}%</b></td></tr>`}).join('')
+        ||'<tr><td colspan="4" class="empty">Nothing matched. Try widening the location.</td></tr>'}
+    </tbody></table></div>`;
+}
+
+/* 2 ── JD match ------------------------------------------------------ */
+async function matchJD(){
+  const jd=$('jd-text').value.trim();
+  if(jd.length<40){ $('jd-warn').textContent='Paste a bit more of the description.'; return }
+  if(!PROFILE){ $('jd-warn').innerHTML='Upload your resume first &mdash; Resume &amp; jobs.'; return }
+  $('jd-warn').textContent='';
+  $('jdout').innerHTML='<div class="load"><span class="sp"></span>Comparing</div>';
+  const co=$('jd-co').value.trim();
+  const d=await (await fetch(API+'/api/jd',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({company:co||null,jd,resume_text:PROFILE.text||'',skills:PROFILE.skills})
+  })).json();
+
+  if(d.percent===null){ $('jdout').innerHTML=`<div class="note warn">${esc(d.note)}</div>`; return }
+  const col=d.percent>=70?'var(--green)':d.percent>=40?'var(--yellow)':'var(--orange)';
+  $('jdout').innerHTML=`
+    <div class="card"><div class="cb" style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+      <div class="ring" style="--p:${d.percent};--rc:${col}"><i>${d.percent}%</i></div>
+      <div style="flex:1;min-width:230px">
+        <div style="font-family:'Space Grotesk';font-size:20px;font-weight:600;margin-bottom:6px">
+          You cover ${d.percent}% of this job description</div>
+        <div style="color:var(--soft);font-size:13.5px;line-height:1.65">Weighted by how rare each
+          skill is, so matching something uncommon counts for more than matching Python.
+          They ask for ${d.asked} recognisable skills; you evidence ${d.have.length}.</div>
+      </div></div></div>
+    <div class="grid2">
+      <div class="card"><div class="ch"><h3>You already have</h3>
+        <span class="hint">${d.have.length}</span></div>
+        <div class="cb"><div class="chips">${d.have.map(h=>
+          `<span class="tag sk">${esc(h.skill)}</span>`).join('')||'<span style="color:var(--faint)">Nothing matched.</span>'}</div></div></div>
+      <div class="card"><div class="ch"><h3>Missing &mdash; add these</h3>
+        <span class="hint">rarest first</span></div>
+        <div class="cb"><div class="chips">${d.missing.map(m=>
+          `<span class="tag miss">${esc(m.skill)}</span>`).join('')||'<span style="color:var(--green)">Nothing missing.</span>'}</div></div></div>
+    </div>
+    ${d.advice.length?`<div class="card"><div class="ch"><h3>What to change</h3></div>
+      <table><tbody>${d.advice.map(a=>`<tr><td><b>${esc(a.skill)}</b>
+        <div style="color:var(--soft);font-size:13px;margin-top:3px">${esc(a.why)}</div></td>
+        <td class="r num" style="color:var(--green)">+${a.gain}%</td></tr>`).join('')}
+      </tbody></table></div>`:''}
+    ${co?`<div class="row"><button class="btn g" onclick="$('co').value='${esc(co)}';go('prep');loadPkg()">
+      Build the prep set for ${esc(co)}</button></div>`:''}`;
+}
+
+/* 3 ── prep set ------------------------------------------------------ */
+const SECCOLOR={overview:'var(--orange)',reviews:'var(--pink)',aptitude:'var(--yellow)',reasoning:'var(--purple)',
+  verbal:'var(--pink)',cs_mcq:'var(--blue)',output:'var(--teal)',sql:'var(--green)',
+  coding:'var(--orange)',technical:'var(--blue)',hr:'var(--purple)',plan:'var(--yellow)'};
+
+async function loadPkg(){
+  const name=$('co').value.trim(); if(!name) return;
+  go('prep');
+  $('pkgout').innerHTML='<div class="load"><span class="sp"></span>Checking this company exists</div>';
+
+  const v=await (await fetch(API+'/api/verify?company='+encodeURIComponent(name))).json();
+  if(!v.found){
+    $('pkgout').innerHTML=`<div class="card"><div class="cb">
+      <div style="font-family:'Space Grotesk';font-size:19px;font-weight:600;margin-bottom:7px">
+        No company called "${esc(name)}" turned up</div>
+      <div style="color:var(--soft);font-size:13.5px;line-height:1.65;max-width:62ch">
+        Wikipedia and DuckDuckGo have nothing on it, and nobody has reported a drive for it
+        here. Check the spelling, or try the full registered name. Nothing has been generated,
+        since a made-up package would look just as convincing as a real one.</div>
+      ${v.suggestions.length?`<div class="row">
+        <span style="font-size:13px;color:var(--soft)">Did you mean:</span>
+        ${v.suggestions.map(x=>`<button class="chip" onclick="$('co').value='${esc(x)}';loadPkg()">${esc(x)}</button>`).join('')}
+      </div>`:''}
+      <div class="row"><button class="btn y" onclick="genericPack()">
+        Give me the common campus prep set instead</button></div>
+      <div style="color:var(--faint);font-size:12.5px;margin-top:9px">It covers what campus
+        drives usually ask. Nothing in it is claimed about this company.</div>
+    </div></div>`;
+    return;
+  }
+  await openPkg(v.info.name || name, v.info);
+}
+
+function genericPack(){ $('co').value='Campus drive (general)'; openPkg('Campus drive (general)',null) }
+
+async function openPkg(name, info){
+  // the shortcut tiles are a starting point, not something to read past an
+  // open package; leaving them up made it look like three companies at once
+  $('ready').innerHTML=''; $('cosuggest').innerHTML='';
+  $('pkgout').innerHTML='<div class="load"><span class="sp"></span>Loading the package</div>';
+  PKG=await (await fetch(API+'/api/package?company='+encodeURIComponent(name)
+    +'&language='+encodeURIComponent($('lang').value))).json();
+  PKG.info=info;
+  renderPkg();
+
+  /* What they pay, what employees say and what the test looks like are the
+     reason you opened the page. Waiting for twelve sections of question banks
+     before seeing "how many rounds is it" is the wrong order, so these two
+     build themselves on open and the rest stays on demand. */
+  const need=['overview','reviews'].filter(k=>
+    !(d=>d&&d.content)(PKG.sections.find(x=>x.section===k)));
+  if(need.length && PKG.has_key){
+    const el=document.createElement('div');
+    el.className='load'; el.id='essload';
+    el.innerHTML='<span class="sp"></span>Pulling the test pattern and what employees say…';
+    ($('pkgout').querySelector('.card')||$('pkgout')).insertAdjacentElement('afterend',el);
+    try{
+      await fetch(API+'/api/package/essentials',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({company:name,language:$('lang').value})});
+      PKG=await (await fetch(API+'/api/package?company='+encodeURIComponent(name)
+        +'&language='+encodeURIComponent($('lang').value))).json();
+      PKG.info=info; renderPkg();
+    }catch(e){ const x=$('essload'); if(x) x.remove() }
+  }
+}
+
+function renderPkg(){
+  const d=PKG, apply=d.sections.filter(s=>s.applies!==false);
+  const ready=apply.filter(s=>s.content).length;
+  const missing=apply.filter(s=>!s.content).map(s=>s.section);
+
+  /* Pay and what employees say belong next to the description, not buried in a
+     collapsed section: they are the first two things anyone wants about a
+     company they are about to sit a drive for. */
+  const rv=(d.sections.find(x=>x.section==='reviews')||{}).content;
+  const dot=x=>x==='positive'?'var(--green)':x==='negative'?'var(--bad)':'var(--yellow)';
+  const srcRow=(links,label)=>`<div class="src">${label} &middot; check:
+    ${links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.site)}</a>`)
+      .join(' · ')}</div>`;
+
+  const about = d.info ? `
+    <div class="card"><div class="ch"><h3>About ${esc(d.info.name)}</h3>
+      <span class="hint">${esc(d.info.source)}</span></div>
+      <div class="cb"><div style="color:var(--soft);line-height:1.7">${esc(d.info.summary)}</div>
+      ${d.info.url?`<div class="row"><a class="ghost" href="${esc(d.info.url)}" target="_blank"
+        rel="noopener">Read the source &rarr;</a></div>`:''}</div></div>` : '';
+
+  const pay = rv ? `
+    <div class="card"><div class="ch"><h3>Expected CTC and what employees say</h3>
+      <span class="hint">employee review, not fact</span></div>
+      <div class="cb">
+        ${(rv.ctc||[]).length?`<div class="tiles" style="margin-bottom:14px">
+          ${rv.ctc.slice(0,3).map((x,i)=>`<div class="tile ${['t-g','t-y','t-b'][i%3]}" style="cursor:default">
+            <span class="blob"></span><b>${esc(x.fresher_ctc||'—')}</b>
+            <span>${esc(x.role||'')}${x.bond&&x.bond!=='none reported'?` · bond: ${esc(x.bond)}`:' · no bond reported'}</span>
+            ${x.note?`<span style="font-size:12px;opacity:.75">${esc(x.note)}</span>`:''}
+          </div>`).join('')}</div>`:''}
+        ${(rv.reviews||[]).length?`<table><tbody>${rv.reviews.slice(0,6).map(x=>`<tr>
+          <td style="width:180px"><b>${esc(x.topic||'')}</b>
+            <div style="font-size:11.5px;color:${dot(x.sentiment)};margin-top:3px;
+              text-transform:uppercase;letter-spacing:.05em">${esc(x.sentiment||'')}</div></td>
+          <td style="color:var(--soft)">${esc(x.says||'')}</td></tr>`).join('')}</tbody></table>`:''}
+        <div class="src" style="margin-top:16px">
+          These are the ranges and opinions employees commonly report, summarised rather than
+          taken from any one site, and unverified. Read the source:
+          ${(d.review_links||[]).map(l=>`<a href="${esc(l.url)}" target="_blank"
+            rel="noopener">${esc(l.site)}</a>`).join(' · ')}
+        </div>
+      </div></div>`
+    : (d.sections.some(x=>x.section==='reviews')?`
+      <div class="card"><div class="ch"><h3>Expected CTC and what employees say</h3></div>
+        <div class="cb"><div style="color:var(--soft);font-size:13.5px">Not built yet &mdash;
+          it arrives with the package.</div>
+          ${srcRow(d.review_links||[],'In the meantime')}</div></div>`:'');
+
+  const ov=(d.sections.find(x=>x.section==='overview')||{}).content;
+  const pattern = ov ? `
+    <div class="card"><div class="ch"><h3>What the test looks like</h3>
+      <span class="hint">${(ov.formats||[]).length} reported format${
+        (ov.formats||[]).length===1?'':'s'}</span></div>
+      <div class="cb">
+        ${ov.process?`<div style="margin-bottom:14px"><div style="font-size:12px;
+          text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:8px">
+          The process</div><div class="chips">${ov.process.map((p,i)=>
+            `<span class="chip on">${i+1}. ${esc(p)}</span>`).join('')}</div></div>`:''}
+        ${!(ov.formats||[]).length?`<div class="note warn" style="margin:0 0 12px">
+          No public source describes this company's test format, so no rounds are listed rather
+          than guessed. The sections below are general preparation.</div>`:''}
+        ${(ov.formats||[]).map(f=>`<div class="qa">
+          <div class="qt"><span><b>${esc(f.name||'')}</b></span>
+            <span class="tag pre">${esc(f.seen_in||'')}</span></div>
+          <table style="margin-top:6px"><tbody>${(f.sections||[]).map(x=>
+            `<tr><td>${esc(x)}</td></tr>`).join('')}</tbody></table>
+        </div>`).join('')}
+        ${(ov.what_decides||[]).length?`<div class="tp">What actually filters people</div>
+          <ol>${ov.what_decides.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+        <div class="src">${(ov.sources||[]).length
+          ? `Written from these: ${(ov.sources||[]).slice(0,4).map(u=>
+              `<a href="${esc(u)}" target="_blank" rel="noopener">${
+                esc((u.split('/')[2]||u).replace('www.',''))}</a>`).join(' · ')}`
+          : 'No sources described this process, so the rounds below are the common pattern rather than theirs.'}
+          &middot; cross-check:
+          ${(d.cross_check||[]).slice(0,3).map(c=>`<a href="${esc(c.url)}" target="_blank"
+            rel="noopener">${esc(c.site)}</a>`).join(' · ')}</div>
+      </div></div>` : '';
+
+  const drives = (d.drives||[]).length ? `
+    <div class="sect-h">How the drive actually goes</div>
+    <div class="card"><div class="ch"><h3>Reported by candidates who sat it</h3>
+      <span class="hint">nothing here is generated</span></div>
+      <table><thead><tr><th>Date</th><th>College</th><th>Role</th><th>Rounds</th>
+        <th class="r">Reported by</th></tr></thead><tbody>
+      ${d.drives.map(x=>`<tr><td><b>${esc(x.date)}</b></td><td>${esc(x.campus)}</td>
+        <td style="color:var(--soft)">${esc(x.role||'')}</td>
+        <td>${(x.rounds||[]).map(r=>`<span class="tag pre">${esc(r)}</span>`).join(' ')}</td>
+        <td class="r num">${x.students}</td></tr>`).join('')}</tbody></table>
+      <div class="cb" style="border-top:1px solid var(--line2)">
+        <div class="src" style="border:0;margin:0;padding:0">Source: submissions from students
+          on this site, one per person per drive &middot; cross-check:
+          ${(d.cross_check||[]).slice(0,3).map(c=>`<a href="${esc(c.url)}" target="_blank"
+            rel="noopener">${esc(c.site)}</a>`).join(' · ')}</div></div></div>`
+    : `<div class="note warn"><b>No candidate reports for this drive yet.</b> So the round
+        structure below is the common one for this kind of company, not something confirmed
+        for them. Every item is marked <span class="tag pre">predicted</span> and carries links
+        to check it.</div>`;
+
+  const controls = missing.length ? `
+    <div class="card"><div class="cb">
+      <div style="font-weight:600;margin-bottom:5px">${missing.length} section${
+        missing.length>1?'s':''} not built yet</div>
+      <div style="color:var(--soft);font-size:13.5px">Built once per company, then instant for
+        everyone. It paces itself around the free-tier rate limit, so give it a few minutes.</div>
+      <div class="row"><button class="btn" onclick="buildPkg()" ${d.has_key?'':'disabled'}>Build the package</button>
+        <span class="prog" id="prog" hidden><i style="width:0%"></i></span>
+        <span id="progtxt" style="font-size:13px;color:var(--soft)"></span></div>
+      ${d.has_key?'':`<div class="note bad" style="margin:14px 0 0">No GROQ_API_KEY on the
+        server, so nothing can be built.</div>`}
+    </div></div>` : '';
+
+  const resumeQ = PROFILE ? `
+    <div class="row"><button class="btn b" onclick="resumeQuestions()">
+      Questions they will ask about MY resume</button></div>`
+    : `<div class="note warn">Upload your resume under <b>Resume &amp; jobs</b> and this will also
+        generate the questions an interviewer would ask about your specific projects.</div>`;
+
+  $('pkgout').innerHTML=`
+    <h1 style="font-size:30px;margin:10px 0 4px">${esc(d.company)}</h1>
+    <p style="color:var(--soft);margin-bottom:20px">${ready} of ${apply.length} sections built${
+      d.reported.length?` &middot; ${d.reported.length} questions confirmed by students`:''}</p>
+    ${controls}${about}${pay}${pattern}${drives}
+    ${ready?`<div class="row" style="margin-bottom:18px">
+      <a class="btn y" href="${API}/api/package/pdf?company=${encodeURIComponent(d.company)}"
+         style="text-decoration:none">Download the full PDF</a>
+      <span style="font-size:13px;color:var(--soft)">every section, with sources on each item</span>
+    </div>`:''}
+    ${resumeQ}
+    <div id="rqout"></div>
+    <div class="sect-h">Every round</div>
+    <div class="secs">${d.sections.map(secHTML).join('')}</div>`;
+}
+
+const tagHTML=q=>q.tag==='reported'
+  ? `<span class="tag rep">reported${q.students?' '+q.students:''}${
+      q.years&&q.years.length?' &middot; '+q.years.join('/'):''}</span>`
+  : `<span class="tag pre">predicted</span>`;
+
+function srcHTML(q){
+  if(q.tag==='reported'&&(q.drives||[]).length){
+    return `<div class="src rep">Reported by <b>${q.students}</b> student${q.students===1?'':'s'}
+      &middot; ${q.drives.map(x=>`${esc(x.campus)}, ${esc(x.date)}`).join(' · ')}</div>`;
+  }
+  if((q.verify||[]).length){
+    return `<div class="src">Not confirmed for this company &middot; check:
+      ${q.verify.map(v=>`<a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.site)}</a>`).join(' · ')}</div>`;
+  }
+  return '';
+}
+
+function qaHTML(q){
+  return `<div class="qa">
+    <div class="qt"><span>${esc(q.q||q.text||'')}</span>${tagHTML(q)}</div>
+    ${q.options?`<ol>${q.options.map(o=>`<li>${esc(o)}</li>`).join('')}</ol>`:''}
+    ${q.code?`<pre><code>${esc(q.code)}</code></pre>`:''}
+    ${q.approach?`<div style="font-size:13px;color:var(--soft);margin-bottom:7px">${esc(q.approach)}</div>`:''}
+    ${q.steps?`<ol>${q.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+    ${q.answer?`<div class="ansbox"><b>Answer:</b> ${esc(q.answer)}</div>`:''}
+    ${q.why?`<div style="font-size:12.5px;color:var(--faint);margin-top:7px">${esc(q.why)}</div>`:''}
+    ${q.complexity||q.edge?`<div style="font-size:12.5px;color:var(--faint);margin-top:7px">${
+      [q.complexity?esc(q.complexity):'',q.edge?'Edge case: '+esc(q.edge):''].filter(Boolean).join(' · ')}</div>`:''}
+    ${q.practice_url?`<div class="src"><a href="${esc(q.practice_url)}" target="_blank"
+      rel="noopener">Practise this one &rarr;</a></div>`:''}
+    ${srcHTML(q)}</div>`;
+}
+
+function innerFor(s,c){
+  let inner='';
+  if(s.section==='overview'){
+    const rows=[['Role',c.role],['Process',(c.process||[]).join(' → ')],
+      ['Eligibility',(c.eligibility||[]).join(' · ')],['Keep ready',(c.keep_ready||[]).join(', ')]];
+    inner=`<table><tbody>${rows.filter(r=>r[1]).map(r=>
+      `<tr><td style="width:140px;color:var(--soft)">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>
+      ${(c.formats||[]).length?`<div class="tp">Reported test formats</div>
+        ${c.formats.map(f=>`<div class="qa"><div class="qt"><span>${esc(f.name||'')}</span>
+          <span class="tag pre">${esc(f.seen_in||'')}</span></div>
+          <ol>${(f.sections||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`).join('')}`:''}
+      ${(c.what_decides||[]).length?`<div class="tp">What decides selection</div>
+        <ol>${c.what_decides.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}`;
+  } else if(s.section==='plan'){
+    inner=`<table><tbody>${(c.days||[]).map(x=>
+      `<tr><td style="width:88px"><b>${esc(x.day||'')}</b></td><td>${esc(x.focus||'')}</td>
+       <td class="r" style="color:var(--faint)">${esc(x.hours||'')}</td></tr>`).join('')}</tbody></table>
+      ${(c.checklist||[]).length?`<div class="tp">Test-day checklist</div>
+        <ol>${c.checklist.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+      ${(c.mistakes||[]).length?`<div class="tp">Mistakes people actually make</div>
+        <ol>${c.mistakes.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}`;
+  } else if(s.section==='reviews'){
+    const dot=x=>x==='positive'?'var(--green)':x==='negative'?'var(--bad)':'var(--yellow)';
+    inner=`<div class="note warn" style="margin-top:12px"><b>Employee review, not fact.</b>
+        Everything here is what current and former employees report, aggregated. Treat pay
+        figures as the commonly-cited range rather than an offer.</div>
+      ${(c.ctc||[]).length?`<div class="tp">Pay reported</div>
+        <table><thead><tr><th>Role</th><th>Fresher CTC</th><th>Bond</th><th>Note</th></tr></thead>
+        <tbody>${c.ctc.map(x=>`<tr><td><b>${esc(x.role||'')}</b></td>
+          <td class="num">${esc(x.fresher_ctc||'')}</td><td>${esc(x.bond||'')}</td>
+          <td style="color:var(--soft)">${esc(x.note||'')}</td></tr>`).join('')}</tbody></table>`:''}
+      ${(c.reviews||[]).length?`<div class="tp">What employees say</div>
+        ${c.reviews.map(x=>`<div class="qa">
+          <div class="qt"><span><b>${esc(x.topic||'')}</b></span>
+            <span class="tag pre" style="color:${dot(x.sentiment)}">${esc(x.sentiment||'')}</span></div>
+          <div style="color:var(--soft);font-size:13.5px">${esc(x.says||'')}</div>
+          <div class="src">What employees report &middot; not verified &middot;
+            ${(PKG.review_links||[]).slice(0,2).map(l=>`<a href="${esc(l.url)}" target="_blank"
+              rel="noopener">check on ${esc(l.site.split(' ')[0])}</a>`).join(' · ')}</div>
+        </div>`).join('')}`:''}
+      ${(c.watch_out||[]).length?`<div class="tp">What candidates wish they had known</div>
+        <ol>${c.watch_out.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+      ${(PKG.review_links||[]).length?`<div class="tp">Check these yourself</div>
+        <div class="vids">${PKG.review_links.map(r=>`<a class="ghost" href="${esc(r.url)}"
+          target="_blank" rel="noopener">${esc(r.site)} &rarr;</a>`).join('')}</div>`:''}`;
+  } else if(s.section==='coding'){ inner=(c.problems||[]).map(qaHTML).join('');
+  } else if(s.section==='hr'){
+    inner=(c.questions||[]).map(qaHTML).join('')
+      +((c.project_questions||[]).length?`<div class="tp">What they ask about your project</div>
+        <ol>${c.project_questions.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'')
+      +((c.about_company||[]).length?`<div class="tp">Know this about them</div>
+        <ol>${c.about_company.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'');
+  } else {
+    inner=((c.advice||[]).length?`<div class="fbox"><b>How this round is scored</b>
+      <ul>${c.advice.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')
+      +(c.topics||[]).map(t=>`<div class="tp">${esc(t.name||'')}</div>
+        ${(t.formulas||[]).length?`<div class="fbox"><b>Formulas</b>
+          <ul>${t.formulas.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`:''}
+        ${(t.questions||[]).map(qaHTML).join('')}`).join('');
+  }
+  return inner;
+}
+
+function countQ(c){
+  let n=(c.problems||[]).length+(c.questions||[]).length;
+  (c.topics||[]).forEach(t=>n+=(t.questions||[]).length);
+  return n;
+}
+
+function secHTML(s){
+  const c=s.content, col=SECCOLOR[s.section]||'var(--line)';
+  if(s.applies===false) return `<details class="sec" style="--sc:var(--line);opacity:.55">
+    <summary>${esc(s.title)}<span class="n">not in their process</span></summary>
+    <div class="inner"><p style="color:var(--soft);font-size:13.5px;margin-top:12px">
+      Nothing in this company's reported process suggests they run this round, so it is left out
+      rather than padded in.</p></div></details>`;
+  if(!c) return `<details class="sec" style="--sc:${col}"><summary>${esc(s.title)}
+    <span class="n">not built</span></summary>
+    <div class="inner"><p style="color:var(--soft);font-size:13.5px;margin-top:12px">
+      Build the package to fill this in.</p></div></details>`;
+  const vids=(s.videos||[]).length?`<div class="tp">Watch</div><div class="vids">${
+    s.videos.map(v=>`<a class="ghost" href="${esc(v.url)}" target="_blank" rel="noopener"
+      >▸ ${esc(v.title)}</a>`).join('')}</div>`:'';
+  return `<details class="sec" style="--sc:${col}"><summary>${esc(s.title)}
+    <span class="n">${countQ(c)||''} ${countQ(c)?'questions':'ready'}</span></summary>
+    <div class="inner">${innerFor(s,c)}${vids}
+      <div class="row"><a class="ghost" href="${API}/api/package/pdf?company=${
+        encodeURIComponent(PKG.company)}&sections=${s.section}">Download this section as PDF</a>
+      </div></div></details>`;
+}
+
+async function buildPkg(){
+  const company=PKG.company, lang=$('lang').value;
+  const missing=PKG.sections.filter(s=>!s.content&&s.applies!==false).map(s=>s.section);
+  const order=['overview',...missing.filter(m=>m!=='overview')];
+  const bar=$('prog'), txt=$('progtxt'); bar.hidden=false;
+  for(let i=0;i<order.length;i++){
+    const t=(PKG.sections.find(s=>s.section===order[i])||{}).title||order[i];
+    txt.textContent=`${t} (${i+1} of ${order.length})`;
+    bar.querySelector('i').style.width=(i/order.length*100)+'%';
+    try{ await fetch(API+'/api/package/generate',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({company,sections:[order[i]],language:lang})}) }catch(e){}
+  }
+  bar.querySelector('i').style.width='100%'; txt.textContent='Done';
+  await openPkg(company, PKG.info);
+}
+
+async function resumeQuestions(){
+  if(!PROFILE) return;
+  $('rqout').innerHTML='<div class="load"><span class="sp"></span>Reading your resume against this company</div>';
+  const d=await (await fetch(API+'/api/resume_questions',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({company:PKG.company,resume_text:PROFILE.text||'',skills:PROFILE.skills})
+  })).json();
+  if(d.error){ $('rqout').innerHTML=`<div class="note bad">${esc(d.error)}</div>`; return }
+  $('rqout').innerHTML=`
+    <div class="sect-h">From your resume specifically</div>
+    ${(d.weak_spots||[]).length?`<div class="note warn"><b>Will not survive a follow-up:</b>
+      ${d.weak_spots.map(esc).join(' · ')}</div>`:''}
+    ${(d.strong_points||[]).length?`<div class="note ok"><b>Steer towards:</b>
+      ${d.strong_points.map(esc).join(' · ')}</div>`:''}
+    <div class="card"><div class="cb">${(d.questions||[]).map(q=>`<div class="qa">
+      <div class="qt"><span>${esc(q.q)}</span><span class="tag pre">your resume</span></div>
+      ${q.because?`<div style="font-size:12.5px;color:var(--faint);margin-bottom:8px">
+        Because your resume says: ${esc(q.because)}</div>`:''}
+      ${q.answer?`<div class="ansbox"><b>How to answer:</b> ${esc(q.answer)}</div>`:''}
+    </div>`).join('')}</div></div>`;
+}
+
+/* 4 ── chat ---------------------------------------------------------- */
+function paintChat(){
+  $('msgs').innerHTML=CHAT.map(m=>
+    `<div class="msg ${m.role==='user'?'me':'ai'}">${
+      m.role==='user'?esc(m.content)
+        :((m.lang&&/```/.test(m.content))
+            ?`<div class="mlang">answered in ${esc(m.lang)}</div>`:'')+md(m.content)}</div>`
+  ).join('') || `<div class="empty">Ask about a coding problem, an aptitude question,
+     an HR answer, your resume, or an offer. Placements and jobs only.</div>`;
+  $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+/* Changing the dropdown does not rewrite an answer already on screen, which
+   read as "it gives the same code for every language". Say so, and offer to
+   ask again rather than leaving the stale answer looking authoritative. */
+function langChanged(){
+  const last=[...CHAT].reverse().find(m=>m.role==='user');
+  const hasCode=CHAT.some(m=>m.role==='assistant'&&/```/.test(m.content||''));
+  if(!last||!hasCode) return;
+  const hint=$('langhint');
+  if(hint) hint.remove();
+  const el=document.createElement('div');
+  el.id='langhint'; el.className='note warn'; el.style.margin='10px 0 0';
+  el.innerHTML=`Answers above were written in a different language.
+    <button class="ghost" style="margin-left:8px" onclick="reask()">Ask again in ${
+      esc($('asklang').value)}</button>`;
+  $('msgs').appendChild(el); $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+function reask(){
+  const last=[...CHAT].reverse().find(m=>m.role==='user');
+  const h=$('langhint'); if(h) h.remove();
+  if(last){ $('chatin').value=last.content; send() }
+}
+
+async function send(){
+  const h=$('langhint'); if(h) h.remove();
+  const t=$('chatin').value.trim(); if(!t) return;
+  $('chatin').value=''; CHAT.push({role:'user',content:t}); paintChat();
+  $('sendbtn').disabled=true;
+  CHAT.push({role:'assistant',content:'…'}); paintChat();
+  /* Without a deadline a stalled request leaves the placeholder on screen for
+     ever with the Send button disabled, which is how the page ended up with two
+     permanent "…" bubbles and no way to retry. */
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),70000);
+  try{
+    const r=await fetch(API+'/api/chat',{method:'POST',signal:ctl.signal,
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:CHAT.slice(0,-1),language:$('asklang').value})});
+    const d=await r.json();
+    CHAT[CHAT.length-1]={role:'assistant',content:d.reply||d.error||'No reply.',
+                         lang:$('asklang').value, retry:d.retry_after||0};
+    if(d.retry_after) countdown(d.retry_after);
+  }catch(e){
+    CHAT[CHAT.length-1]={role:'assistant',
+      content: e.name==='AbortError'
+        ? 'That took too long — the free tier may be rate limited right now. Send it again.'
+        : 'The request failed. Check the server is running and try again.'};
+  }
+  clearTimeout(timer);
+  $('sendbtn').disabled=false; paintChat();
+}
+
+/* When the shared allowance runs out the honest thing is to say how long, and
+   then actually send it again rather than making someone watch a clock. */
+function countdown(secs){
+  const idx=CHAT.length-1, ask=[...CHAT].reverse().find(m=>m.role==='user');
+  let left=secs;
+  const tick=setInterval(()=>{
+    left--;
+    if(left<=0){
+      clearInterval(tick);
+      CHAT.splice(idx,1);
+      if(ask){ $('chatin').value=ask.content; send() }
+      return;
+    }
+    CHAT[idx]={role:'assistant',
+      content:`Busy — the free tier allows 8,000 tokens a minute and that is currently used up. `
+             +`Retrying automatically in ${left}s.`};
+    paintChat();
+  },1000);
+}
+
+/* 5 ── report -------------------------------------------------------- */
+const KINDS=['aptitude','english','coding','tech','managerial','hr'];
+$('s-rounds').innerHTML=KINDS.map(k=>
+  `<button class="chip" data-k="${k}" onclick="this.classList.toggle('on')">${k}</button>`).join('');
+function addQ(){
+  const d=document.createElement('div'); d.className='row'; d.style.marginTop='8px';
+  d.innerHTML=`<select class="inp" style="width:90px">${[1,2,3,4,5].map(n=>
+    `<option value="${n}">R${n}</option>`).join('')}</select>
+    <input class="inp" style="flex:1" placeholder="e.g. reverse a linked list without recursion">`;
+  $('qrows').appendChild(d);
+}
+addQ(); addQ();
+const PERSONAL=['gmail.com','outlook.com','hotmail.com','yahoo.com','yahoo.in','icloud.com',
+  'proton.me','protonmail.com','live.com','rediffmail.com'];
+$('s-email').addEventListener('input',e=>{
+  const d=(e.target.value.trim().toLowerCase().split('@')[1])||'', el=$('s-emailkind');
+  if(!d.includes('.')){ el.textContent='A college address is marked verified. A personal one still counts.';
+    el.style.color='var(--faint)'; return }
+  const p=PERSONAL.includes(d);
+  el.textContent=p?'Personal address — counted, marked unverified.'
+                  :'College address — counted and marked verified.';
+  el.style.color=p?'var(--yellow)':'var(--green)';
+});
+async function submitDrive(){
+  const rounds=[...document.querySelectorAll('#s-rounds .chip.on')].map(b=>b.dataset.k);
+  const questions=[...$('qrows').children].map(r=>({
+    round_seq:+r.querySelector('select').value, text:r.querySelector('input').value.trim()
+  })).filter(q=>q.text.length>7);
+  const out=$('subout'); out.textContent='Submitting…';
+  try{
+    const r=await fetch(API+'/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:$('s-email').value,batch:+$('s-batch').value||2027,
+        company:$('s-company').value.trim(),campus:$('s-campus').value.trim(),
+        held_on:$('s-date').value,role:$('s-role').value.trim()||null,
+        reached_seq:+$('s-reached').value||1,selected:$('s-sel').classList.contains('on'),
+        rounds,questions})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||'Could not submit.');
+    out.innerHTML='<span style="color:var(--green)">Recorded, merging into the counts…</span>';
+    await fetch(API+'/api/rebuild',{method:'POST'});
+    out.innerHTML='<span style="color:var(--green)">Done. Your questions are in.</span>';
+    boot();
+  }catch(e){ out.innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>` }
+}
+
+paintChat(); boot();
+</script></body></html>

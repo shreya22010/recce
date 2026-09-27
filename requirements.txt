@@ -1,0 +1,14 @@
+# The embeddings run through ONNX rather than torch: the same MiniLM at 106 MB
+# of runtime and weights instead of 590 MB, measured as identical on the
+# labelled set (F1 0.804). That is what lets full dedup quality fit a free tier.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+python-multipart>=0.0.9
+pypdf>=4.0
+certifi>=2024.2.2
+psycopg[binary]>=3.1
+weasyprint>=61.0
+onnxruntime>=1.17
+tokenizers>=0.15
+numpy>=1.26

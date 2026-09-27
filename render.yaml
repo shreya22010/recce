@@ -1,0 +1,20 @@
+# Docker rather than the Python runtime: the PDF needs Chromium and the
+# deduplicator needs room for the embedding model. Neither fits the plain
+# Python environment.
+services:
+  - type: web
+    name: recce
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: RECCE_CONTACT
+        sync: false
+      - key: RECCE_ENV
+        value: production
